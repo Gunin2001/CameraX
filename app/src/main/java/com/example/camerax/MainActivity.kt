@@ -1,9 +1,10 @@
 package com.example.camerax
 
 import android.content.pm.PackageManager
+import android.opengl.Matrix
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.view.View
+import android.view.Surface
 import android.view.ViewGroup
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraX
@@ -11,7 +12,6 @@ import androidx.camera.core.Preview
 import androidx.camera.core.PreviewConfig
 import androidx.core.app.ActivityCompat
 import kotlinx.android.synthetic.main.activity_main.*
-import java.security.Permission
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,7 +20,10 @@ class MainActivity : AppCompatActivity() {
         if(ActivityCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA)
             == PackageManager.PERMISSION_GRANTED)
         {
-            startCamera()
+            textureView.post{
+                startCamera()
+            }
+
         }
         else{
             ActivityCompat.requestPermissions(this,arrayOf(android.Manifest.permission.CAMERA),1234)
@@ -30,14 +33,32 @@ class MainActivity : AppCompatActivity() {
     private fun startCamera() {
         val previewConfig = PreviewConfig.Builder().apply {
             setTargetAspectRatio(AspectRatio.RATIO_16_9)
+            setLensFacing(CameraX.LensFacing.BACK)
         }.build()
         val preview = Preview(previewConfig)
         preview.setOnPreviewOutputUpdateListener{
-            var parent = textureView.parent as ViewGroup
+            val parent = textureView.parent as ViewGroup
             parent.removeView(textureView)
             parent.addView(textureView,0)
-            textureView.surfaceTexture = it.surfaceTexture
+            updateTransform()
+            textureView.setSurfaceTexture(it.surfaceTexture)
         }
         CameraX.bindToLifecycle(this,preview)
     }
+
+    private fun updateTransform() {
+        val matrix = Matrix()
+        val centreX = textureView.width / 2f
+        val centreY = textureView.height / 2f
+        val rotationDeg = when(textureView.display.rotation){
+            Surface.ROTATION_0 -> 0
+            Surface.ROTATION_90 -> 90
+            Surface.ROTATION_180 -> 180
+            Surface.ROTATION_270 -> 270
+            else -> return
+        }
+        matrix.postRotate(-rotationDegress.toFloat(), centerX, centerY)
+        textureView.setTransform(matrix)
+    }
+
 }
